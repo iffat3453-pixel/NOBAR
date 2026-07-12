@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sports Hub - Live & Replay</title>
+<style>
+/* --- GAYA (Style) - Sama seperti sebelumnya --- */
+* { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+body { background:#0a0e17; color:#fff; padding:20px; }
+.container { max-width:900px; margin:auto; }
+
+/* HEADER */
+.header { text-align:center; padding:20px 0; border-bottom:2px solid #00d4ff; margin-bottom:20px; }
+.header h1 { font-size:28px; background:linear-gradient(135deg,#00d4ff,#ff6b35); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.header p { color:#8899aa; font-size:14px; margin-top:5px; }
+
+/* FILTER TOMBOL */
+.filter { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:25px; }
+.filter button { padding:10px 24px; border:none; border-radius:25px; font-size:14px; font-weight:600; cursor:pointer; transition:0.3s; background:#1a2430; color:#8899aa; }
+.filter button:hover { background:#2a3a4a; color:#fff; }
+.filter button.active { background:linear-gradient(135deg,#00d4ff,#0088cc); color:#fff; box-shadow:0 0 20px rgba(0,212,255,0.3); }
+
+/* KARTU JADWAL */
+.card { background:#111b26; border-radius:16px; padding:18px 20px; margin-bottom:14px; border-left:5px solid #00d4ff; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; transition:0.3s; cursor:pointer; }
+.card:hover { background:#16212e; border-left-color:#ff6b35; }
+.card .info { flex:2; min-width:200px; }
+.card .info .judul { font-size:17px; font-weight:700; }
+.card .info .detail { font-size:13px; color:#8899aa; margin-top:4px; }
+.card .info .detail span { background:#1a2a3a; padding:2px 10px; border-radius:12px; margin-right:8px; font-size:11px; }
+.card .waktu { text-align:right; min-width:120px; }
+.card .waktu .jam { font-size:18px; font-weight:700; color:#00d4ff; }
+.card .waktu .tanggal { font-size:12px; color:#8899aa; }
+.card .status { font-size:11px; padding:3px 12px; border-radius:12px; font-weight:600; display:inline-block; margin-top:4px; }
+.status-live { background:#ff4444; color:#fff; animation:blink 1s infinite; }
+.status-replay { background:#f39c12; color:#fff; }
+.status-upcoming { background:#2ecc71; color:#fff; }
+.status-selesai { background:#555; color:#fff; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.label-bola { background:#e74c3c; color:#fff; }
+.label-game { background:#9b59b6; color:#fff; }
+.label-basket { background:#f39c12; color:#fff; }
+.label-motor { background:#e67e22; color:#fff; }
+
+/* LIVE PLAYER */
+.live-box { background:#0a0e17; border-radius:16px; padding:15px; margin:20px 0; border:2px solid #00d4ff; display:none; }
+.live-box.show { display:block; }
+.live-box .live-label { font-size:14px; font-weight:700; color:#ff4444; animation:blink 1s infinite; display:inline-block; margin-right:12px; }
+.live-box .replay-label { font-size:14px; font-weight:700; color:#f39c12; display:inline-block; margin-right:12px; }
+.live-box .selesai-label { font-size:14px; font-weight:700; color:#aaa; display:inline-block; margin-right:12px; }
+.live-box iframe { width:100%; height:350px; border-radius:12px; margin-top:10px; border:none; }
+.live-box .close-btn { float:right; background:transparent; border:none; color:#8899aa; font-size:20px; cursor:pointer; }
+.live-box .close-btn:hover { color:#fff; }
+
+/* FOOTER */
+.footer { text-align:center; margin-top:40px; padding:20px 0; border-top:1px solid #1a2a3a; }
+.footer p { color:#556677; font-size:13px; letter-spacing:1px; }
+.footer .dev { color:#00d4ff; font-weight:700; font-size:15px; }
+
+/* RESPONSIVE */
+@media (max-width:600px){
+  .card { flex-direction:column; align-items:flex-start; }
+  .card .waktu { text-align:left; margin-top:8px; width:100%; }
+  .live-box iframe { height:220px; }
+  .header h1 { font-size:22px; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>⚡ SPORTS HUB</h1>
+    <p>Live Streaming & Replay • Klik kartu untuk tonton</p>
+  </div>
+
+  <!-- LIVE PLAYER -->
+  <div class="live-box" id="liveBox">
+    <button class="close-btn" onclick="tutupPlayer()">✕</button>
+    <div id="liveLabel" class="live-label">🔴 LIVE</div>
+    <div id="liveTitle" style="color:#00d4ff;font-size:14px;display:inline-block;"></div>
+    <div id="livePlayer">
+      <p style="color:#8899aa; text-align:center; padding:30px 0;">Pilih pertandingan dari daftar di bawah.</p>
+    </div>
+  </div>
+
+  <!-- FILTER -->
+  <div class="filter" id="filterContainer">
+    <button class="active" data-filter="semua">🏟️ Semua</button>
+    <button data-filter="bola">⚽ Bola</button>
+    <button data-filter="game">🎮 Game</button>
+    <button data-filter="basket">🏀 Basket</button>
+    <button data-filter="motor">🏍️ Motor</button>
+  </div>
+
+  <!-- DAFTAR JADWAL -->
+  <div id="jadwalContainer"></div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <p>© 2026 Sports Hub • Dibuat dengan ❤️ oleh <span class="dev">Iffat Dev</span></p>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// 1. DATA JADWAL — JADWAL ARGENTINA VS SWISS DITAMBAHKAN
+// ============================================================
+const dataJadwal = [
+  {
+    id: 1,
+    judul: "📺 REPLAY: PASURUAN UNITED vs PESIK KUNINGAN",
+    detail: "Final Liga 4 Piala Presiden 2026 • Skor: 1 - 0",
+    tanggal: "11 Juli 2026",
+    jam: "14.00 WIB",
+    kategori: "bola",
+    status: "replay",
+    link: "https://www.youtube.com/embed/P_WDWnGFZE4"
+  },
+  {
+    id: 2,
+    judul: "Kejurnas Motocross Piala Kapolda Jatim",
+    detail: "Sirkuit Kota Batu, Jawa Timur",
+    tanggal: "11-12 Juli 2026",
+    jam: "08.00 WIB",
+    kategori: "motor",
+    status: "live",
+    link: "https://www.youtube.com/embed/VIDEO_ID_MOTOCROSS"
+  },
+  {
+    id: 3,
+    judul: "Grand Final FFNS 2026 Fall",
+    detail: "Grha Sabha Pramana, UGM • Free Fire Esports",
+    tanggal: "12 Juli 2026",
+    jam: "11.45 WIB",
+    kategori: "game",
+    status: "upcoming",
+    link: "https://www.youtube.com/embed/VIDEO_ID_FFNS"
+  },
+  {
+    id: 4,
+    judul: "NBA Playoffs 2026 - Game 5",
+    detail: "Boston Celtics vs LA Lakers",
+    tanggal: "13 Juli 2026",
+    jam: "09.30 WIB",
+    kategori: "basket",
+    status: "upcoming",
+    link: "https://www.youtube.com/embed/VIDEO_ID_NBA"
+  },
+  {
+    id: 5,
+    judul: "REPLAY: Argentina vs Mesir",
+    detail: "Piala Dunia 2026 • Babak 16 Besar • Skor: 3 - 2",
+    tanggal: "7 Juli 2026",
+    jam: "02.00 WIB",
+    kategori: "bola",
+    status: "replay",
+    link: "https://www.youtube.com/embed/8JYXHEmJQdI"
+  },
+  {
+    id: 6,
+    judul: "REPLAY: Spanyol vs Belgia",
+    detail: "Piala Dunia 2026 • Perempat Final • Skor: 2 - 1",
+    tanggal: "10 Juli 2026",
+    jam: "02.00 WIB",
+    kategori: "bola",
+    status: "replay",
+    link: "https://www.youtube.com/embed/cVxqzP0mPcQ"
+  },
+  {
+    id: 7,
+    judul: "⚽ Argentina vs Swiss",
+    detail: "Piala Dunia 2026 • Perempat Final • Siaran TVRI & FolaPlay",
+    tanggal: "12 Juli 2026",
+    jam: "08.00 WIB",
+    kategori: "bola",
+    status: "upcoming",
+    link: "https://www.youtube.com/results?search_query=Argentina+vs+Swiss+Piala+Dunia+2026"
+  }
+];
+
+// ============================================================
+// 2. RENDER JADWAL (Fungsi ini sama seperti sebelumnya)
+// ============================================================
+function renderJadwal(filter = "semua") {
+  const container = document.getElementById("jadwalContainer");
+  let filtered = dataJadwal;
+  if (filter !== "semua") {
+    filtered = dataJadwal.filter(item => item.kategori === filter);
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<p style="text-align:center;color:#8899aa;padding:30px;">Tidak ada jadwal untuk kategori ini.</p>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(item => {
+    const labelClass = `label-${item.kategori}`;
+    let statusText = '';
+    let statusClass = '';
+    if (item.status === 'live') {
+        statusText = '🔴 LIVE';
+        statusClass = 'status-live';
+    } else if (item.status === 'replay') {
+        statusText = '📺 REPLAY';
+        statusClass = 'status-replay';
+    } else if (item.status === 'upcoming') {
+        statusText = '⏳ SEGERA';
+        statusClass = 'status-upcoming';
+    } else if (item.status === 'selesai') {
+        statusText = '✅ SELESAI';
+        statusClass = 'status-selesai';
+    }
+
+    return `
+      <div class="card" onclick="putar('${item.link}', '${item.judul}', '${item.status}')">
+        <div class="info">
+          <div class="judul">${item.judul}</div>
+          <div class="detail">
+            <span class="${labelClass}">${item.kategori.toUpperCase()}</span>
+            ${item.detail}
+          </div>
+        </div>
+        <div class="waktu">
+          <div class="jam">${item.jam}</div>
+          <div class="tanggal">${item.tanggal}</div>
+          <div class="status ${statusClass}">${statusText}</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// ============================================================
+// 3. FUNGSI PUTAR (Dengan penanganan link pencarian)
+// ============================================================
+function putar(link, judul, status) {
+  const box = document.getElementById("liveBox");
+  const player = document.getElementById("livePlayer");
+  const label = document.getElementById("liveLabel");
+  const title = document.getElementById("liveTitle");
+
+  box.classList.add("show");
+
+  if (status === 'live') {
+    label.className = 'live-label';
+    label.textContent = '🔴 LIVE';
+  } else if (status === 'replay') {
+    label.className = 'replay-label';
+    label.textContent = '📺 REPLAY';
+  } else if (status === 'selesai') {
+    label.className = 'selesai-label';
+    label.textContent = '✅ SELESAI';
+  } else {
+    label.className = 'replay-label';
+    label.textContent = '⏳ SEGERA (belum tayang)';
+  }
+
+  title.textContent = judul;
+
+  // Cek jika link adalah pencarian YouTube
+  if (link.includes('youtube.com/results')) {
+    player.innerHTML = `
+      <div style="padding:20px;text-align:center;">
+        <p style="color:#f39c12;font-size:16px;margin-bottom:10px;">⏳ Pertandingan belum dimulai</p>
+        <p style="color:#8899aa;font-size:14px;">Argentina vs Swiss • Minggu, 12 Juli 2026 • 08.00 WIB</p>
+        <p style="color:#8899aa;font-size:13px;margin-top:10px;">📺 Siaran resmi di TVRI (gratis) & FolaPlay</p>
+        <a href="${link}" target="_blank" style="display:inline-block;margin-top:15px;padding:10px 20px;background:#ff4444;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">🔍 Cari di YouTube</a>
+      </div>
+    `;
+    return;
+  }
+
+  if (status === 'selesai' || !link) {
+    player.innerHTML = `
+      <p style="color:#8899aa; text-align:center; padding:30px 0;">
+        📺 Pertandingan telah selesai.<br>Replay akan tersedia jika sudah diupload.
+      </p>
+    `;
+    return;
+  }
+
+  let embedLink = link;
+  if (link.includes('youtu.be/')) {
+    const videoId = link.split('youtu.be/')[1]?.split('?')[0];
+    if (videoId) embedLink = `https://www.youtube.com/embed/${videoId}`;
+  } else if (link.includes('watch?v=')) {
+    const videoId = link.split('v=')[1]?.split('&')[0];
+    if (videoId) embedLink = `https://www.youtube.com/embed/${videoId}`;
+  } else if (link.includes('/live/')) {
+    const videoId = link.split('/live/')[1]?.split('?')[0];
+    if (videoId) embedLink = `https://www.youtube.com/embed/${videoId}`;
+  }
+
+  if (embedLink && !embedLink.includes('VIDEO_ID')) {
+    player.innerHTML = `
+      <iframe src="${embedLink}?autoplay=1" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+    `;
+  } else {
+    player.innerHTML = `
+      <p style="color:#8899aa; text-align:center; padding:30px 0;">
+        🔗 Link belum tersedia.<br>Update ID video di dataJadwal.
+      </p>
+    `;
+  }
+}
+
+// ============================================================
+// 4. TUTUP PLAYER
+// ============================================================
+function tutupPlayer() {
+  const box = document.getElementById("liveBox");
+  const player = document.getElementById("livePlayer");
+  box.classList.remove("show");
+  player.innerHTML = `<p style="color:#8899aa; text-align:center; padding:30px 0;">Pilih pertandingan dari daftar di bawah.</p>`;
+}
+
+// ============================================================
+// 5. FILTER
+// ============================================================
+document.querySelectorAll(".filter button").forEach(btn => {
+  btn.addEventListener("click", function() {
+    document.querySelectorAll(".filter button").forEach(b => b.classList.remove("active"));
+    this.classList.add("active");
+    renderJadwal(this.dataset.filter);
+  });
+});
+
+// ============================================================
+// 6. JALANKAN
+// ============================================================
+renderJadwal("semua");
+
+console.log(`
+✅ JADWAL ARGENTINA VS SWISS DITAMBAHKAN!
+- Pertandingan: Argentina vs Swiss (Perempat Final Piala Dunia 2026)
+- Waktu: Minggu, 12 Juli 2026 • 08.00 WIB
+- Siaran: TVRI & FolaPlay
+- Total jadwal: ${dataJadwal.length}
+`);
+</script>
+
+</body>
+</html>
